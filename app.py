@@ -13,16 +13,37 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-st.set_page_config(page_title="InfoBeans Foundation Reporting", layout="wide")
+st.set_page_config(page_title="InfoBeans Foundation Reporting", layout="wide", page_icon="🎓")
 
+# Streamlit Custom Theme Styling (Official InfoBeans Colors)
 st.markdown("""
 <style>
-    .badge-ready { background-color: #DCFCE7; color: #166534; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-    .badge-not-ready { background-color: #FEE2E2; color: #991B1B; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+    :root {
+        --primary-color: #EA1B3D;
+        --secondary-color: #F7925B;
+        --dark-color: #2F2F39;
+    }
+    .main-header {
+        color: #2F2F39;
+        font-weight: 800;
+        border-bottom: 3px solid #EA1B3D;
+        padding-bottom: 8px;
+    }
+    .stButton>button {
+        background-color: #EA1B3D;
+        color: white;
+        border-radius: 6px;
+        border: none;
+        font-weight: 600;
+    }
+    .stButton>button:hover {
+        background-color: #c91432;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎓 InfoBeans Foundation — Automated Reporting System")
+st.title("🎓 InfoBeans Foundation — Student Reporting System")
 st.caption("Empowering Talent, Building Futures — Cross-Batch Aggregation & Live Dispatch")
 
 if "email_logs" not in st.session_state:
@@ -38,26 +59,25 @@ def safe_num(val, default=0.0):
 
 def get_performance_status(att_pct, test_pct):
     if att_pct < 75.0 or test_pct < 65.0:
-        return "Needs Attention"
+        return "Needs Attention", colors.HexColor('#EA1B3D'), colors.HexColor('#FEE2E2')
     elif att_pct >= 85.0 and test_pct >= 80.0:
-        return "Good"
-    return "Satisfactory"
+        return "Good", colors.HexColor('#16A34A'), colors.HexColor('#DCFCE7')
+    return "Satisfactory", colors.HexColor('#F7925B'), colors.HexColor('#FFF7ED')
 
-# --- PDF GENERATOR 1: COLLEGE MASTER PDF ---
+# --- PDF GENERATOR 1: COLLEGE CONSOLIDATED MASTER REPORT ---
 def generate_college_pdf(college_name, month_str, df_college):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=32, bottomMargin=32)
     elements = []
-    styles = getSampleStyleSheet()
     
-    brand_title = ParagraphStyle('BTitle', fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#0F172A'), spaceAfter=2)
-    brand_sub = ParagraphStyle('BSub', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#64748B'), spaceAfter=6)
-    rep_title = ParagraphStyle('RTitle', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#0284C7'), spaceAfter=2)
-    college_header = ParagraphStyle('CHead', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#0F172A'))
-    month_badge = ParagraphStyle('MBadge', fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#0284C7'), alignment=2)
+    brand_title = ParagraphStyle('BTitle', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#2F2F39'), spaceAfter=2)
+    brand_sub = ParagraphStyle('BSub', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#EA1B3D'), spaceAfter=4)
+    rep_title = ParagraphStyle('RTitle', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#555562'))
+    college_header = ParagraphStyle('CHead', fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#2F2F39'))
+    month_badge = ParagraphStyle('MBadge', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#EA1B3D'), alignment=2)
     
     header_data = [
-        [Paragraph("<b>InfoBeans Foundation</b>", brand_title), Paragraph(f"<b>{month_str.upper()}</b>", month_badge)],
+        [Paragraph("<b>InfoBeans Foundation</b>", brand_title), Paragraph(f"<b>{str(month_str).upper()}</b>", month_badge)],
         [Paragraph("EMPOWERING TALENT • BUILDING FUTURES", brand_sub), ""],
         [Paragraph("COLLEGE MONTHLY ATTENDANCE & PROGRESS REPORT", rep_title), ""],
         [Paragraph(f"<b>{college_name}</b>", college_header), ""]
@@ -66,12 +86,11 @@ def generate_college_pdf(college_name, month_str, df_college):
     t_header.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('SPAN', (1,0), (1,3)),
-        ('ALIGN', (1,0), (1,3), 'RIGHT'),
         ('PADDING', (0,0), (-1,-1), 1),
     ]))
     elements.append(t_header)
-    elements.append(Spacer(1, 8))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0284C7'), spaceBefore=0, spaceAfter=10))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=2.5, color=colors.HexColor('#EA1B3D'), spaceBefore=2, spaceAfter=8))
     
     total_students = len(df_college)
     num_batches = df_college['Batch'].nunique()
@@ -80,24 +99,24 @@ def generate_college_pdf(college_name, month_str, df_college):
     
     kpi_data = [
         [f"{total_students}", f"{num_batches}", f"{avg_att:.1f}%", f"{avg_test:.1f}%"],
-        ["TOTAL STUDENTS", "BATCHES", "AVG ATTENDANCE", "AVG TEST SCORE"]
+        ["TOTAL STUDENTS", "ACTIVE BATCHES", "AVG ATTENDANCE", "AVG TEST SCORE"]
     ]
     t_kpi = Table(kpi_data, colWidths=[135]*4)
     t_kpi.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('BOX', (0,0), (-1,-1), 0.75, colors.HexColor('#CBD5E1')),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,0), 15),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#0F172A')),
+        ('FONTSIZE', (0,0), (-1,0), 14),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#2F2F39')),
         ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,1), (-1,1), 7.5),
+        ('FONTSIZE', (0,1), (-1,1), 7),
         ('TEXTCOLOR', (0,1), (-1,1), colors.HexColor('#64748B')),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
     ]))
     elements.append(t_kpi)
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 10))
     
     for batch_name, batch_group in df_college.groupby('Batch', sort=False):
         b_start_str = str(batch_group['Batch Start'].iloc[0])[:10]
@@ -105,14 +124,15 @@ def generate_college_pdf(college_name, month_str, df_college):
         
         b_header_data = [
             [
-                Paragraph(f"<b>{batch_name.upper()}</b>", ParagraphStyle('BH', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#0F172A'))),
-                Paragraph(f"{b_start_str} - {b_end_str}", ParagraphStyle('BD', fontName='Helvetica', fontSize=8.5, textColor=colors.HexColor('#64748B'), alignment=2))
+                Paragraph(f"<b>BATCH: {str(batch_name).upper()}</b>", ParagraphStyle('BH', fontName='Helvetica-Bold', fontSize=9.5, textColor=colors.HexColor('#2F2F39'))),
+                Paragraph(f"Duration: {b_start_str} to {b_end_str}", ParagraphStyle('BD', fontName='Helvetica', fontSize=8, textColor=colors.HexColor('#64748B'), alignment=2))
             ]
         ]
         t_bheader = Table(b_header_data, colWidths=[270, 270])
         t_bheader.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F1F5F9')),
-            ('PADDING', (0,0), (-1,-1), 4),
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FFF5F5')),
+            ('LINELEFT', (0,0), (0,0), 3, colors.HexColor('#EA1B3D')),
+            ('PADDING', (0,0), (-1,-1), 3.5),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ]))
         elements.append(t_bheader)
@@ -125,49 +145,49 @@ def generate_college_pdf(college_name, month_str, df_college):
             test_v = safe_num(s['test_calc'])
             b_att_list.append(att_v)
             b_test_list.append(test_v)
+            status_txt, _, _ = get_performance_status(att_v, test_v)
             
             table_rows.append([
                 str(s['Student Name']),
                 str(s['Student ID']),
                 f"{att_v:.1f}%",
                 f"{test_v:.1f}%",
-                get_performance_status(att_v, test_v)
+                status_txt
             ])
             
         b_avg_att = sum(b_att_list) / len(b_att_list) if b_att_list else 0.0
         b_avg_test = sum(b_test_list) / len(b_test_list) if b_test_list else 0.0
-        table_rows.append([f"{batch_name} Average", "", f"{b_avg_att:.1f}%", f"{b_avg_test:.1f}%", ""])
+        table_rows.append([f"{batch_name} Batch Average", "", f"{b_avg_att:.1f}%", f"{b_avg_test:.1f}%", ""])
         
         t_batch = Table(table_rows, colWidths=[160, 95, 95, 95, 95])
         t_batch.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F172A')),
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2F2F39')),
             ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,0), 8),
+            ('FONTSIZE', (0,0), (-1,0), 7.5),
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
             ('ALIGN', (0,0), (0,-1), 'LEFT'),
             ('ALIGN', (1,0), (-1,-1), 'CENTER'),
-            ('PADDING', (0,0), (-1,-1), 3.5),
+            ('PADDING', (0,0), (-1,-1), 3),
             ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F8FAFC')),
             ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
         ]))
         elements.append(t_batch)
-        elements.append(Spacer(1, 8))
+        elements.append(Spacer(1, 6))
         
     elements.append(Spacer(1, 6))
     clean_col_id = "".join(filter(str.isalnum, str(college_name))).upper()
     clean_month_id = "".join(filter(str.isalnum, str(month_str))).upper()
-    report_id = f"RPT-{clean_month_id}-{clean_col_id}"
+    report_id = f"IBF-COL-{clean_month_id}-{clean_col_id}"
     today_str = datetime.datetime.now().strftime("%d %B %Y")
     
     footer_data = [
-        [f"Report ID: {report_id}", "This is a system generated report"],
-        [f"Reporting Month: {month_str}", "InfoBeans Foundation"],
-        [f"Generated on: {today_str}", "Contact: ittraining@infobeans.com | Indore, MP"]
+        [f"Report ID: {report_id}", "Official Confidential College Report"],
+        [f"Reporting Cycle: {month_str}", "InfoBeans Foundation • ittraining@infobeans.com | Indore, MP"]
     ]
     t_footer = Table(footer_data, colWidths=[270, 270])
     t_footer.setStyle(TableStyle([
-        ('FONTSIZE', (0,0), (-1,-1), 7.5),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
         ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor('#64748B')),
         ('ALIGN', (1,0), (1,-1), 'RIGHT'),
         ('PADDING', (0,0), (-1,-1), 1),
@@ -178,90 +198,177 @@ def generate_college_pdf(college_name, month_str, df_college):
     buffer.seek(0)
     return buffer.getvalue()
 
-# --- PDF GENERATOR 2: PARENT PDF ---
+# --- PDF GENERATOR 2: MODERN BRANDED PARENT REPORT ---
 def generate_parent_pdf(s_row, month_str):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=32, bottomMargin=32)
     elements = []
-    styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('Title', fontName='Helvetica-Bold', fontSize=15, alignment=1, textColor=colors.HexColor('#0F172A'))
-    sub_title = ParagraphStyle('SubTitle', fontName='Helvetica-Bold', fontSize=10, alignment=1, textColor=colors.HexColor('#0284C7'))
-    sec_style = ParagraphStyle('Sec', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#0F172A'), spaceBefore=8, spaceAfter=4)
+    brand_title = ParagraphStyle('BTitle', fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#2F2F39'), spaceAfter=1)
+    brand_sub = ParagraphStyle('BSub', fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#EA1B3D'), spaceAfter=4)
+    rep_title = ParagraphStyle('RTitle', fontName='Helvetica-Bold', fontSize=10.5, textColor=colors.HexColor('#555562'))
+    month_badge = ParagraphStyle('MBadge', fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#EA1B3D'), alignment=2)
+    sec_title = ParagraphStyle('STitle', fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#2F2F39'), spaceBefore=6, spaceAfter=3)
     
-    elements.append(Paragraph("<b>INFOBEANS FOUNDATION</b>", title_style))
-    elements.append(Paragraph("<b>STUDENT MONTHLY ATTENDANCE & PROGRESS REPORT</b>", sub_title))
-    elements.append(Paragraph(f"Reporting Month: <b>{month_str}</b>", ParagraphStyle('RMonth', alignment=1, fontSize=9, textColor=colors.HexColor('#64748B'))))
-    elements.append(Spacer(1, 10))
+    # 1. Header Banner
+    header_data = [
+        [Paragraph("<b>InfoBeans Foundation</b>", brand_title), Paragraph(f"<b>{str(month_str).upper()}</b>", month_badge)],
+        [Paragraph("EMPOWERING TALENT • BUILDING FUTURES", brand_sub), ""],
+        [Paragraph("STUDENT MONTHLY ATTENDANCE & PROGRESS REPORT", rep_title), ""]
+    ]
+    t_header = Table(header_data, colWidths=[380, 160])
+    t_header.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('SPAN', (1,0), (1,2)),
+        ('PADDING', (0,0), (-1,-1), 1),
+    ]))
+    elements.append(t_header)
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=2.5, color=colors.HexColor('#EA1B3D'), spaceBefore=2, spaceAfter=8))
     
+    # 2. Student Info Card
     info_data = [
         ["Student Name", str(s_row['Student Name']), "Student ID", str(s_row['Student ID'])],
-        ["Batch", str(s_row['Batch']), "College", str(s_row['College'])],
+        ["Enrolled Batch", str(s_row['Batch']), "College / Institute", str(s_row['College'])],
     ]
-    t1 = Table(info_data, colWidths=[100, 170, 100, 170])
-    t1.setStyle(TableStyle([
+    t_info = Table(info_data, colWidths=[95, 175, 95, 175])
+    t_info.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('BOX', (0,0), (-1,-1), 0.75, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
         ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
         ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('TEXTCOLOR', (0,0), (0,-1), colors.HexColor('#475569')),
+        ('TEXTCOLOR', (2,0), (2,-1), colors.HexColor('#475569')),
+        ('FONTSIZE', (0,0), (-1,-1), 8.5),
+        ('PADDING', (0,0), (-1,-1), 4.5),
     ]))
-    elements.append(t1)
+    elements.append(t_info)
     elements.append(Spacer(1, 8))
     
-    elements.append(Paragraph("<b>1. Monthly Attendance Record</b>", sec_style))
+    # Numbers calculation
     att_pct = safe_num(s_row['attendance_calc'])
+    test_pct = safe_num(s_row['test_calc'])
+    status_txt, status_fg, status_bg = get_performance_status(att_pct, test_pct)
+    
     tot_cls = int(safe_num(s_row.get('Total Classes'), 40))
     prs_cls = int(safe_num(s_row.get('Classes Present'), 0))
     absent = max(0, tot_cls - prs_cls)
-    
-    att_data = [
-        ["Total Classes", "Classes Attended", "Classes Absent", "Attendance %"],
-        [str(tot_cls), str(prs_cls), str(absent), f"{att_pct:.1f}%"]
-    ]
-    t2 = Table(att_data, colWidths=[135]*4)
-    t2.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E2E8F0')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    elements.append(t2)
-    elements.append(Spacer(1, 8))
-    
-    elements.append(Paragraph("<b>2. Monthly Assessment Performance</b>", sec_style))
-    test_pct = safe_num(s_row['test_calc'])
-    status = get_performance_status(att_pct, test_pct)
     
     t_obt = int(safe_num(s_row.get('Tech Obtained'), 0))
     t_max = int(safe_num(s_row.get('Tech Max Marks'), 100))
     s_obt = int(safe_num(s_row.get('Soft Skills Obtained'), 0))
     s_max = int(safe_num(s_row.get('Soft Skills Max'), 100))
     
+    # 3. Modern KPI Highlight Cards
+    kpi_cards = [
+        [f"{att_pct:.1f}%", f"{test_pct:.1f}%", status_txt.upper()],
+        ["MONTHLY ATTENDANCE", "TOTAL ASSESSMENT SCORE", "OVERALL EVALUATION"]
+    ]
+    t_kpicards = Table(kpi_cards, colWidths=[180, 180, 180])
+    t_kpicards.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (0,-1), colors.HexColor('#F0FDF4') if att_pct>=75 else colors.HexColor('#FFF5F5')),
+        ('BACKGROUND', (1,0), (1,-1), colors.HexColor('#F8FAFC')),
+        ('BACKGROUND', (2,0), (2,-1), status_bg),
+        ('BOX', (0,0), (-1,-1), 0.75, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 13),
+        ('TEXTCOLOR', (0,0), (0,0), colors.HexColor('#16A34A') if att_pct>=75 else colors.HexColor('#EA1B3D')),
+        ('TEXTCOLOR', (1,0), (1,0), colors.HexColor('#2F2F39')),
+        ('TEXTCOLOR', (2,0), (2,0), status_fg),
+        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,1), (-1,1), 7),
+        ('TEXTCOLOR', (0,1), (-1,1), colors.HexColor('#64748B')),
+        ('PADDING', (0,0), (-1,-1), 4),
+    ]))
+    elements.append(t_kpicards)
+    elements.append(Spacer(1, 8))
+    
+    # 4. Attendance Breakdown Table
+    elements.append(Paragraph("<b>1. Monthly Attendance Record</b>", sec_title))
+    att_table_data = [
+        ["Total Sessions Conducted", "Sessions Attended", "Sessions Absent", "Attendance %"],
+        [str(tot_cls), str(prs_cls), str(absent), f"{att_pct:.1f}%"]
+    ]
+    t_att = Table(att_table_data, colWidths=[135]*4)
+    t_att.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2F2F39')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
+        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
+        ('PADDING', (0,0), (-1,-1), 4.5),
+    ]))
+    elements.append(t_att)
+    elements.append(Spacer(1, 8))
+    
+    # 5. Assessment Breakdown Table
+    elements.append(Paragraph("<b>2. Monthly Assessment Performance</b>", sec_title))
     t_pct = (t_obt / t_max * 100) if t_max > 0 else 0.0
     s_pct = (s_obt / s_max * 100) if s_max > 0 else 0.0
     
-    marks_data = [
-        ["Assessment Track", "Max Marks", "Marks Obtained", "Percentage"],
-        ["Technical Skills Test", str(t_max), str(t_obt), f"{t_pct:.1f}%"],
-        ["Soft Skills Test", str(s_max), str(s_obt), f"{s_pct:.1f}%"],
-        ["Combined Assessment Total", str(t_max + s_max), str(t_obt + s_obt), f"{test_pct:.1f}% (Status: {status})"]
+    marks_table_data = [
+        ["Evaluation Track", "Maximum Marks", "Marks Obtained", "Track Percentage"],
+        ["Technical Skills Assessment", str(t_max), str(t_obt), f"{t_pct:.1f}%"],
+        ["Soft Skills & Aptitude Assessment", str(s_max), str(s_obt), f"{s_pct:.1f}%"],
+        ["Consolidated Assessment Total", str(t_max + s_max), str(t_obt + s_obt), f"{test_pct:.1f}%"]
     ]
-    t3 = Table(marks_data, colWidths=[180, 110, 110, 140])
-    t3.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E2E8F0')),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+    t_marks = Table(marks_table_data, colWidths=[180, 110, 110, 140])
+    t_marks.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2F2F39')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
         ('ALIGN', (1,0), (-1,-1), 'CENTER'),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('BACKGROUND', (0,1), (-1,-2), colors.HexColor('#FFFFFF')),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#FFF5F5')),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('PADDING', (0,0), (-1,-1), 4.5),
     ]))
-    elements.append(t3)
+    elements.append(t_marks)
+    elements.append(Spacer(1, 14))
     
-    elements.append(Spacer(1, 16))
-    elements.append(Paragraph("<i>Note: This is an official system-generated report issued by InfoBeans Foundation.</i>", ParagraphStyle('Foot', fontSize=8, textColor=colors.HexColor('#64748B'))))
+    # 6. Guidance & Signature Block
+    sign_block = [
+        [
+            Paragraph("<b>Remarks / Faculty Guidance:</b><br/>Consistent session attendance and practical test performance are crucial for IT career readiness.", ParagraphStyle('Rem', fontSize=7.5, textColor=colors.HexColor('#475569'))),
+            Paragraph("<b>Academic Administration</b><br/>InfoBeans Foundation", ParagraphStyle('Sign', fontSize=8, textColor=colors.HexColor('#2F2F39'), alignment=2))
+        ]
+    ]
+    t_sign = Table(sign_block, colWidths=[360, 180])
+    t_sign.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LINEABOVE', (1,0), (1,0), 0.75, colors.HexColor('#94A3B8')),
+        ('PADDING', (0,0), (-1,-1), 2),
+    ]))
+    elements.append(t_sign)
+    elements.append(Spacer(1, 10))
+    
+    # 7. Document ID & Official Footer
+    clean_std_id = "".join(filter(str.isalnum, str(s_row['Student ID']))).upper()
+    clean_month = "".join(filter(str.isalnum, str(month_str))).upper()
+    doc_id = f"IBF-STU-{clean_month}-{clean_std_id}"
+    today_str = datetime.datetime.now().strftime("%d %B %Y")
+    
+    footer_data = [
+        [f"Document ID: {doc_id}", "Official system-generated student progress report."],
+        [f"Generated on: {today_str}", "InfoBeans Foundation • Contact: ittraining@infobeans.com"]
+    ]
+    t_foot = Table(footer_data, colWidths=[270, 270])
+    t_foot.setStyle(TableStyle([
+        ('FONTSIZE', (0,0), (-1,-1), 6.5),
+        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor('#94A3B8')),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('PADDING', (0,0), (-1,-1), 1),
+    ]))
+    elements.append(t_foot)
+    
     doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
@@ -454,35 +561,37 @@ if uploaded_file is not None:
 
         # 2. COLLEGE TAB
         with tab_college:
-            if st.button("🚀 Send Consolidated Reports to ALL Colleges"):
-                if not sender_email or not sender_pwd:
-                    st.error("Please enter Sender Gmail and App Password above.")
-                else:
-                    progress_bar = st.progress(0)
-                    colleges = master_df['College'].unique()
-                    for idx, c_name in enumerate(colleges):
-                        c_subset = master_df[master_df['College'] == c_name]
-                        target_email = c_subset['College Email'].iloc[0] if 'College Email' in c_subset.columns and pd.notnull(c_subset['College Email'].iloc[0]) else f"tpo@{str(c_name).lower().replace(' ', '')}.edu"
-                        pdf_bytes = generate_college_pdf(str(c_name), month_label, c_subset)
-                        
-                        sub = f"InfoBeans Foundation: Monthly Progress & Attendance Report — {c_name} ({month_label})"
-                        body = f"Respected College Authority / TPO,\n\nPlease find attached the consolidated monthly progress report for {c_name} for {month_label}.\n\nTotal Students: {len(c_subset)}\n\nRegards,\nInfoBeans Foundation"
-                        try:
-                            send_email_with_pdf(sender_email, sender_pwd, target_email, sub, body, pdf_bytes, f"{c_name}_Monthly_Report.pdf")
-                            status = "Sent"
-                        except Exception as e:
-                            status = f"Failed: {e}"
+            col_send_box, _ = st.columns([2, 1])
+            with col_send_box:
+                if st.button("🚀 Send Consolidated Reports to ALL Colleges", type="primary", use_container_width=True):
+                    if not sender_email or not sender_pwd:
+                        st.error("Please enter Sender Gmail and App Password in Step 2.")
+                    else:
+                        progress_bar = st.progress(0)
+                        colleges = master_df['College'].unique()
+                        for idx, c_name in enumerate(colleges):
+                            c_subset = master_df[master_df['College'] == c_name]
+                            target_email = c_subset['College Email'].iloc[0] if 'College Email' in c_subset.columns and pd.notnull(c_subset['College Email'].iloc[0]) else f"tpo@{str(c_name).lower().replace(' ', '')}.edu"
+                            pdf_bytes = generate_college_pdf(str(c_name), month_label, c_subset)
                             
-                        st.session_state.email_logs.append({
-                            "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "Recipient Type": "College",
-                            "Target Name": c_name,
-                            "Email": target_email,
-                            "Status": status
-                        })
-                        progress_bar.progress((idx + 1) / len(colleges))
-                    st.success("All college dispatches executed!")
-                    st.rerun()
+                            sub = f"InfoBeans Foundation: Monthly Progress & Attendance Report — {c_name} ({month_label})"
+                            body = f"Respected College Authority / TPO,\n\nPlease find attached the consolidated monthly progress report for {c_name} for {month_label}.\n\nTotal Students: {len(c_subset)}\n\nRegards,\nAcademic Administration\nInfoBeans Foundation"
+                            try:
+                                send_email_with_pdf(sender_email, sender_pwd, target_email, sub, body, pdf_bytes, f"{c_name}_Monthly_Report.pdf")
+                                status = "Sent"
+                            except Exception as e:
+                                status = f"Failed: {e}"
+                                
+                            st.session_state.email_logs.append({
+                                "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "Recipient Type": "College",
+                                "Target Name": c_name,
+                                "Email": target_email,
+                                "Status": status
+                            })
+                            progress_bar.progress((idx + 1) / len(colleges))
+                        st.success("All college reports successfully dispatched!")
+                        st.rerun()
 
             st.markdown("---")
             for col_name in master_df['College'].unique():
@@ -512,27 +621,43 @@ if uploaded_file is not None:
 
         # 3. PARENTS TAB
         with tab_parents:
-            if st.button("🚀 Send Individual Reports to ALL Parents"):
-                if not sender_email or not sender_pwd:
-                    st.error("Please enter Sender Gmail and App Password above.")
-                else:
-                    progress_bar2 = st.progress(0)
-                    for idx, row in master_df.iterrows():
-                        parent_email = row['Parent Email'] if 'Parent Email' in row and pd.notnull(row['Parent Email']) else f"parent_{row['Student ID']}@gmail.com"
-                        parent_pdf = generate_parent_pdf(row, month_label)
-                        sub = f"InfoBeans Foundation: Monthly Progress Report — {row['Student Name']} ({month_label})"
-                        body = f"Dear Parent,\n\nPlease find attached the monthly progress report of your ward {row['Student Name']} ({row['Batch']}) for {month_label}.\n\nRegards,\nInfoBeans Foundation"
-                        try:
-                            send_email_with_pdf(sender_email, sender_pwd, parent_email, sub, body, parent_pdf, f"{row['Student ID']}_Report.pdf")
-                            status = "Sent"
-                        except Exception as e:
-                            status = f"Failed: {e}"
-                        st.session_state.email_logs.append({"Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Recipient Type": "Parent", "Target Name": f"{row['Student Name']} ({row['Student ID']})", "Email": parent_email, "Status": status})
-                        progress_bar2.progress((idx + 1) / len(master_df))
-                    st.success("All parent emails dispatched!")
-                    st.rerun()
+            st.markdown("##### 🚀 Bulk Dispatch Action")
+            p_bulk_col, _ = st.columns([2, 1])
+            with p_bulk_col:
+                if st.button("🚀 Send Individual Reports to ALL Parents", type="primary", use_container_width=True):
+                    if not sender_email or not sender_pwd:
+                        st.error("Please enter Sender Gmail and App Password in Step 2.")
+                    else:
+                        progress_bar2 = st.progress(0)
+                        status_text = st.empty()
+                        total_parents = len(master_df)
+                        for idx, row in master_df.iterrows():
+                            status_text.text(f"Sending email {idx+1}/{total_parents}: {row['Student Name']}...")
+                            parent_email = row['Parent Email'] if 'Parent Email' in row and pd.notnull(row['Parent Email']) else f"parent_{row['Student ID']}@gmail.com"
+                            parent_pdf = generate_parent_pdf(row, month_label)
+                            sub = f"InfoBeans Foundation: Monthly Progress Report — {row['Student Name']} ({month_label})"
+                            body = f"""Dear Parent,
+
+Please find attached the official monthly progress and attendance report for your ward {row['Student Name']} (ID: {row['Student ID']}, Batch: {row['Batch']}) for the month of {month_label}.
+
+Regards,
+Academic Administration
+InfoBeans Foundation
+Indore (M.P.)
+"""
+                            try:
+                                send_email_with_pdf(sender_email, sender_pwd, parent_email, sub, body, parent_pdf, f"{row['Student ID']}_Report.pdf")
+                                status = "Sent"
+                            except Exception as e:
+                                status = f"Failed: {e}"
+                            st.session_state.email_logs.append({"Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Recipient Type": "Parent", "Target Name": f"{row['Student Name']} ({row['Student ID']})", "Email": parent_email, "Status": status})
+                            progress_bar2.progress((idx + 1) / total_parents)
+                        status_text.empty()
+                        st.success("All individual parent emails dispatched successfully!")
+                        st.rerun()
 
             st.markdown("---")
+            st.markdown("##### 🧑 Individual Student Actions")
             for _, row in master_df.iterrows():
                 parent_email = row['Parent Email'] if 'Parent Email' in row and pd.notnull(row['Parent Email']) else f"parent_{row['Student ID']}@gmail.com"
                 parent_pdf = generate_parent_pdf(row, month_label)
