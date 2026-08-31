@@ -23,7 +23,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🎓 InfoBeans Foundation — Automated Reporting System")
-st.caption("Empowering Talent, Building Futures — Dynamic Multi-Format Parser & Auto Dispatch")
+st.caption("Empowering Talent, Building Futures — Cross-Batch Aggregation & Live Dispatch")
 
 if "email_logs" not in st.session_state:
     st.session_state.email_logs = []
@@ -147,8 +147,8 @@ def generate_college_pdf(college_name, month_str, df_college):
         elements.append(Spacer(1, 8))
         
     elements.append(Spacer(1, 6))
-    clean_col_id = "".join(filter(str.isalnum, college_name)).upper()
-    clean_month_id = "".join(filter(str.isalnum, month_str)).upper()
+    clean_col_id = "".join(filter(str.isalnum, str(college_name))).upper()
+    clean_month_id = "".join(filter(str.isalnum, str(month_str))).upper()
     report_id = f"RPT-{clean_month_id}-{clean_col_id}"
     today_str = datetime.datetime.now().strftime("%d %B %Y")
     
@@ -202,7 +202,7 @@ def generate_parent_pdf(s_row, month_str):
     elements.append(Spacer(1, 8))
     
     elements.append(Paragraph("<b>1. Monthly Attendance Record</b>", sec_style))
-    att_pct = s_row['attendance_calc']
+    att_pct = float(s_row['attendance_calc'])
     tot_cls = s_row.get('Total Classes', 0)
     prs_cls = s_row.get('Classes Present', 0)
     absent = max(0, tot_cls - prs_cls) if pd.notnull(tot_cls) and pd.notnull(prs_cls) else 0
@@ -223,13 +223,13 @@ def generate_parent_pdf(s_row, month_str):
     elements.append(Spacer(1, 8))
     
     elements.append(Paragraph("<b>2. Monthly Assessment Performance</b>", sec_style))
-    test_pct = s_row['test_calc']
+    test_pct = float(s_row['test_calc'])
     status = get_performance_status(att_pct, test_pct)
     
-    t_obt = s_row.get('Tech Obtained', 0) if pd.notnull(s_row.get('Tech Obtained', 0)) else 0
-    t_max = s_row.get('Tech Max Marks', 100) if pd.notnull(s_row.get('Tech Max Marks', 100)) else 100
-    s_obt = s_row.get('Soft Skills Obtained', 0) if pd.notnull(s_row.get('Soft Skills Obtained', 0)) else 0
-    s_max = s_row.get('Soft Skills Max', 100) if pd.notnull(s_row.get('Soft Skills Max', 100)) else 100
+    t_obt = s_row.get('Tech Obtained', 0)
+    t_max = s_row.get('Tech Max Marks', 100)
+    s_obt = s_row.get('Soft Skills Obtained', 0)
+    s_max = s_row.get('Soft Skills Max', 100)
     
     marks_data = [
         ["Assessment Track", "Max Marks", "Marks Obtained", "Percentage"],
@@ -295,7 +295,6 @@ def parse_excel_smart(uploaded_file):
             
         df = pd.read_excel(uploaded_file, sheet_name=sheet, skiprows=header_row_idx)
         
-        # Extract batch dates if available in top rows
         b_start, b_end = "2026-01-01", "2026-12-31"
         try:
             if header_row_idx > 0:
@@ -307,7 +306,7 @@ def parse_excel_smart(uploaded_file):
         except:
             pass
 
-        # 2. Normalize and Map Column Names
+        # 2. Rename & normalize
         col_map = {}
         for c in df.columns:
             cl = str(c).strip().lower()
@@ -327,8 +326,6 @@ def parse_excel_smart(uploaded_file):
                 col_map[c] = 'Classes Present'
             elif "absent" in cl:
                 col_map[c] = 'Classes Absent'
-            elif "attendance %" in cl or "attendance percentage" in cl:
-                col_map[c] = 'Attendance %'
             elif "tech max" in cl:
                 col_map[c] = 'Tech Max Marks'
             elif "tech obt" in cl or "technical marks" in cl or "tech marks" in cl:
@@ -341,12 +338,9 @@ def parse_excel_smart(uploaded_file):
                 col_map[c] = 'Total Max Marks'
             elif "total obt" in cl or "total marks" in cl:
                 col_map[c] = 'Total Obtained'
-            elif "test %" in cl or "test percentage" in cl or "marks %" in cl:
-                col_map[c] = 'Test %'
 
         df = df.rename(columns=col_map)
         
-        # Fill standard columns if missing
         if 'Student Name' not in df.columns and len(df.columns) > 1:
             df['Student Name'] = df.iloc[:, 1]
         if 'Student ID' not in df.columns and len(df.columns) > 2:
@@ -362,17 +356,17 @@ def parse_excel_smart(uploaded_file):
         df['Batch Start'] = b_start
         df['Batch End'] = b_end
         
-        # Calculate safe numbers
-        tot_c = pd.to_numeric(df.get('Total Classes', 40), errors='coerce').fillna(40)
-        prs_c = pd.to_numeric(df.get('Classes Present', 0), errors='coerce').fillna(0)
+        # Safe numeric parsing using pd.Series
+        tot_c = pd.to_numeric(pd.Series(df['Total Classes'] if 'Total Classes' in df.columns else 40), errors='coerce').fillna(40)
+        prs_c = pd.to_numeric(pd.Series(df['Classes Present'] if 'Classes Present' in df.columns else 0), errors='coerce').fillna(0)
         df['Total Classes'] = tot_c
         df['Classes Present'] = prs_c
         df['attendance_calc'] = (prs_c / tot_c.replace(0, 1)) * 100.0
         
-        t_obt = pd.to_numeric(df.get('Tech Obtained', 0), errors='coerce').fillna(0)
-        t_max = pd.to_numeric(df.get('Tech Max Marks', 100), errors='coerce').fillna(100)
-        s_obt = pd.to_numeric(df.get('Soft Skills Obtained', 0), errors='coerce').fillna(0)
-        s_max = pd.to_numeric(df.get('Soft Skills Max', 100), errors='coerce').fillna(100)
+        t_obt = pd.to_numeric(pd.Series(df['Tech Obtained'] if 'Tech Obtained' in df.columns else 0), errors='coerce').fillna(0)
+        t_max = pd.to_numeric(pd.Series(df['Tech Max Marks'] if 'Tech Max Marks' in df.columns else 100), errors='coerce').fillna(100)
+        s_obt = pd.to_numeric(pd.Series(df['Soft Skills Obtained'] if 'Soft Skills Obtained' in df.columns else 0), errors='coerce').fillna(0)
+        s_max = pd.to_numeric(pd.Series(df['Soft Skills Max'] if 'Soft Skills Max' in df.columns else 100), errors='coerce').fillna(100)
         
         df['Tech Obtained'] = t_obt
         df['Tech Max Marks'] = t_max
@@ -519,6 +513,30 @@ if uploaded_file is not None:
                         progress_bar2.progress((idx + 1) / len(master_df))
                     st.success("All parent emails dispatched!")
                     st.rerun()
+
+            st.markdown("---")
+            for _, row in master_df.iterrows():
+                parent_email = row['Parent Email'] if 'Parent Email' in row and pd.notnull(row['Parent Email']) else f"parent_{row['Student ID']}@gmail.com"
+                parent_pdf = generate_parent_pdf(row, month_label)
+                p_box1, p_box2, p_box3 = st.columns([3, 1, 1.2])
+                with p_box1:
+                    st.write(f"🧑 **{row['Student Name']}** (`{row['Student ID']}`) — Status: **🟢 Ready** | {row['Batch']} | 🏛️ {row['College']}")
+                with p_box2:
+                    st.download_button(label="⬇️ Download PDF", data=parent_pdf, file_name=f"Parent_{row['Student ID']}_{month_label.replace(' ', '_')}.pdf", mime="application/pdf", key=f"dl_par_{row['Student ID']}")
+                with p_box3:
+                    if st.button(f"✉️ Send to Parent", key=f"send_par_{row['Student ID']}"):
+                        if not sender_email or not sender_pwd:
+                            st.error("Enter email credentials first.")
+                        else:
+                            sub = f"InfoBeans Foundation: Monthly Progress Report — {row['Student Name']} ({month_label})"
+                            body = f"Dear Parent,\n\nPlease find attached the monthly progress report of {row['Student Name']} for {month_label}.\n\nRegards,\nInfoBeans Foundation"
+                            try:
+                                send_email_with_pdf(sender_email, sender_pwd, parent_email, sub, body, parent_pdf, f"{row['Student ID']}_Report.pdf")
+                                st.success(f"Sent to {row['Student Name']}'s parent!")
+                                st.session_state.email_logs.append({"Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Recipient Type": "Parent", "Target Name": f"{row['Student Name']} ({row['Student ID']})", "Email": parent_email, "Status": "Sent"})
+                            except Exception as e:
+                                st.error(f"Failed: {e}")
+                                st.session_state.email_logs.append({"Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Recipient Type": "Parent", "Target Name": f"{row['Student Name']} ({row['Student ID']})", "Email": parent_email, "Status": f"Failed: {e}"})
 
         # 4. LOGS TAB
         with tab_logs:
